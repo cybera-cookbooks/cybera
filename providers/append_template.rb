@@ -49,7 +49,7 @@ action :create do
 		group group
 		mode mode
 		variables(
-			:include_files => Dir.glob("#{append_directory_path}/*")
+			:include_files => Dir.glob("#{append_directory_path}/*").sort
 		)
 	end
 end
