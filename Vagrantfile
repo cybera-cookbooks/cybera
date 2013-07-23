@@ -75,7 +75,7 @@ Vagrant.configure("2") do |config|
     }
 
     chef.run_list = [
-        "recipe[cybera::default]"
+        "recipe[cybera::example]"
     ]
   end
 end

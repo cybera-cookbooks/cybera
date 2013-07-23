@@ -1,0 +1,3 @@
+<% @include_files.each do | path | %>
+<%= IO.read(path) %>
+<% end %>
