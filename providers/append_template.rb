@@ -16,6 +16,7 @@ action :create do
 	# we'd have to be smarter and call the next_index method again after we've created the directory and created
 	# any initial indexed files in it.
 	append_index = "%03i" % (new_resource.append_index || next_index(append_directory_path))
+	append_path = Dir.glob("#{append_directory_path}/*_#{append_name}").first || "#{append_directory_path}/#{append_index}_#{append_name}"
 
 	directory append_directory_path do
 		owner owner
@@ -32,14 +33,13 @@ action :create do
 		action :nothing
 	end.run_action(:create_if_missing)
 
-	template "#{append_directory_path}/#{append_index}_#{append_name}" do
+	template append_path do
 		source new_resource.source # How to make sure this path is relative to the cookbook we're calling *from*?
 		cookbook new_resource.cookbook_name.to_s
 		owner owner
 		group group
 		mode mode
 		action :nothing
-		only_if { Dir.glob("#{append_directory_path}/*_#{append_name}").empty? }
 	end.run_action(:create)
 	
 	template file_path do
