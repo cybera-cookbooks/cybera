@@ -1,2 +1,5 @@
-Host 127.0.0.1
+Host <%= @hostname %>
 	HashKnownHosts no
+<% @extra_config.each do |conf| %>
+<%= "\t#{conf}" %>
+<% end if @extra_config %>

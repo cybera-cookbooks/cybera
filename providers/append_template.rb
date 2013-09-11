@@ -3,35 +3,43 @@ def whyrun_supported?
 end
 
 action :create do
-	file_path = new_resource.file_path
+	file_path = new_resource.path
 	owner = new_resource.owner || ( ::File.exist?(file_path) ? ::File.stat(file_path).uid : "root" )
 	group = new_resource.group || ( ::File.exist?(file_path) ? ::File.stat(file_path).gid : "root" )
 	mode = new_resource.mode || ( ::File.exist?(file_path) ? ("%05o" % ::File.stat(file_path).mode)[-5..-1] : 00644)
 	existing_content = ::File.exist?(file_path) ? IO.read(file_path) : ""
 
 	append_directory_path = "#{file_path}.d.chef"
-	append_name = new_resource.append_name || new_resource.source.gsub(".erb", "")
+	append_label = new_resource.label || new_resource.source.gsub(".erb", "")
 	# If the append directory hasn't been created, the call to next_index will return 1, which happens to be
 	# what we want as the next index in that case (as we're already creating a 0 index file). If this changes,
 	# we'd have to be smarter and call the next_index method again after we've created the directory and created
 	# any initial indexed files in it.
-	append_index = "%03i" % (new_resource.append_index || next_index(append_directory_path))
-	append_path = Dir.glob("#{append_directory_path}/*_#{append_name}").first || "#{append_directory_path}/#{append_index}_#{append_name}"
+	append_order = "%03i" % (new_resource.order || next_index(append_directory_path))
+	append_path = Dir.glob("#{append_directory_path}/*_#{append_label}").first || "#{append_directory_path}/#{append_order}_#{append_label}"
 
-	directory append_directory_path do
-		owner owner
-		group group
-		mode mode # Best way to compute equivalent directory permissions for a folder?
-		action :nothing
-	end.run_action(:create)	
+	begin
+		run_context.resource_collection.lookup("directory[#{append_directory_path}]")
+	rescue Chef::Exceptions::ResourceNotFound
+		directory append_directory_path do
+			owner owner
+			group group
+			mode mode # Best way to compute equivalent directory permissions for a folder?
+			action :nothing
+		end.run_action(:create)
+	end
 
-	file "#{append_directory_path}/000_#{::File.basename(file_path)}" do
-		owner owner
-		group group
-		mode mode
-		content existing_content
-		action :nothing
-	end.run_action(:create_if_missing)
+	begin
+		run_context.resource_collection.lookup("file[#{append_directory_path}/000_#{::File.basename(file_path)}]")
+	rescue Chef::Exceptions::ResourceNotFound
+		file "#{append_directory_path}/000_#{::File.basename(file_path)}" do
+			owner owner
+			group group
+			mode mode
+			content existing_content
+			action :nothing
+		end.run_action(:create_if_missing)
+	end
 
 	template append_path do
 		source new_resource.source # How to make sure this path is relative to the cookbook we're calling *from*?
@@ -39,10 +47,12 @@ action :create do
 		owner owner
 		group group
 		mode mode
+		variables(new_resource.variables)
 		action :nothing
 	end.run_action(:create)
-	
-	template file_path do
+
+	template "re-concatenate #{file_path} - #{append_label}" do
+		path file_path
 		source "compile.erb"
 		cookbook "cybera"
 		owner owner
