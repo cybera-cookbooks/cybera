@@ -5,16 +5,16 @@ directory "/root/.ssh" do
 	action :create
 end
 
-cybera_append_template "/root/.ssh/config" do
+cybera_append_template "localhost" do
+	path "/root/.ssh/config"
 	source "example.erb"
 	variables(
 		:hostname => "127.0.0.1"
 	)
 end
 
-cybera_append_template "/root/.ssh/config - 10.0.0.3" do
+cybera_append_template "otherhost" do
 	path "/root/.ssh/config"
-	label "otherhost"
 	source "example.erb"
 	variables(
 		:hostname => "10.0.0.3",
